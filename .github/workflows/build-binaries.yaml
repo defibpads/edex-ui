@@ -76,9 +76,16 @@ jobs:
     - name: Run prebuild outside of QEMU emulator
       run: sudo npm i -g npm@10 && npm install && rsync -a --info=progress2 src/ prebuild-src --exclude node_modules && node prebuild-minify.js && rm -rf node_modules
     - name: Build for arm32v7 (aka armv7l)
-      uses: docker://arm32v7/node:22-bookworm
-      with:
-        args: bash -c "npm i -g npm@10 && npm install && ./node_modules/.bin/electron-builder build -l --armv7l"
+      run: |
+        docker run --rm \
+          --platform linux/arm/v7 \
+          -v "$PWD:/workspace" \
+          -v "$HOME/.npm:/root/.npm" \
+          -v "$HOME/.cache/electron:/root/.cache/electron" \
+          -w /workspace \
+          -e GH_TOKEN \
+          node:22-bookworm \
+          bash -c "npm i -g npm@10 && npm install && ./node_modules/.bin/electron-builder build -l --armv7l"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - uses: actions/upload-artifact@v4
@@ -115,9 +122,16 @@ jobs:
     - name: Run prebuild outside of QEMU emulator
       run: sudo npm i -g npm@10 && npm install && rsync -a --info=progress2 src/ prebuild-src --exclude node_modules && node prebuild-minify.js && rm -rf node_modules
     - name: Build for arm64 (aka arm64v8)
-      uses: docker://arm64v8/node:22-bookworm
-      with:
-        args: bash -c "npm i -g npm@10 && npm install && ./node_modules/.bin/electron-builder build -l --arm64"
+      run: |
+        docker run --rm \
+          --platform linux/arm64 \
+          -v "$PWD:/workspace" \
+          -v "$HOME/.npm:/root/.npm" \
+          -v "$HOME/.cache/electron:/root/.cache/electron" \
+          -w /workspace \
+          -e GH_TOKEN \
+          node:22-bookworm \
+          bash -c "npm i -g npm@10 && npm install && ./node_modules/.bin/electron-builder build -l --arm64"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - uses: actions/upload-artifact@v4
