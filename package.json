@@ -28,7 +28,13 @@
     "postbuild-windows": "rmdir /S /Q prebuild-src",
     "test": "rsync -a --info=progress2 src/ prebuild-src --exclude node_modules && node prebuild-minify.js && cd prebuild-src && npm install && snyk test && cd .. && rm -R prebuild-src",
     "init-file-icons": "git submodule update --init",
-    "update-file-icons": "git submodule foreach git pull origin master && node file-icons-generator.js"
+    "update-file-icons": "git submodule foreach git pull origin master && node file-icons-generator.js",
+    "check:metadata": "node scripts/check-metadata.js",
+    "audit:deps": "npm audit --audit-level=high && npm --prefix src audit --audit-level=high",
+    "doctor:native": "node scripts/doctor-native.js",
+    "install-darwin": "npm install && cd src && npm install && ./../node_modules/.bin/electron-rebuild -f -w node-pty && cd ..",
+    "build-darwin-x64": "./node_modules/.bin/electron-builder build -m --x64",
+    "build-darwin-arm64": "./node_modules/.bin/electron-builder build -m --arm64"
   },
   "repository": {
     "type": "git",
@@ -69,7 +75,8 @@
         {
           "target": "dmg",
           "arch": [
-            "x64"
+            "x64",
+            "arm64"
           ]
         }
       ],
@@ -110,5 +117,9 @@
   },
   "optionalDependencies": {
     "cson-parser": "4.0.9"
+  },
+  "engines": {
+    "node": ">=18 <25",
+    "npm": ">=9"
   }
 }

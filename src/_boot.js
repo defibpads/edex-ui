@@ -53,6 +53,72 @@ const innerKblayoutsDir = path.join(__dirname, "assets/kb_layouts");
 const fontsDir = path.join(electron.app.getPath("userData"), "fonts");
 const innerFontsDir = path.join(__dirname, "assets/fonts");
 
+function isCommandAvailable(command) {
+    try {
+        return which.sync(command, {nothrow: true}) !== null;
+    } catch(e) {
+        return false;
+    }
+}
+
+function getDefaultShortcuts() {
+    return [
+        { type: "app", trigger: "Ctrl+Shift+C", action: "COPY", enabled: true },
+        { type: "app", trigger: "Ctrl+Shift+V", action: "PASTE", enabled: true },
+        { type: "app", trigger: "Ctrl+Tab", action: "NEXT_TAB", enabled: true },
+        { type: "app", trigger: "Ctrl+Shift+Tab", action: "PREVIOUS_TAB", enabled: true },
+        { type: "app", trigger: "Ctrl+X", action: "TAB_X", enabled: true },
+        { type: "app", trigger: "Ctrl+Shift+S", action: "SETTINGS", enabled: true },
+        { type: "app", trigger: "Ctrl+Shift+K", action: "SHORTCUTS", enabled: true },
+        { type: "app", trigger: "Ctrl+Shift+F", action: "FUZZY_SEARCH", enabled: true },
+        { type: "app", trigger: "Ctrl+Shift+L", action: "FS_LIST_VIEW", enabled: true },
+        { type: "app", trigger: "Ctrl+Shift+H", action: "FS_DOTFILES", enabled: true },
+        { type: "app", trigger: "Ctrl+Shift+P", action: "KB_PASSMODE", enabled: true },
+        { type: "app", trigger: "Ctrl+Shift+I", action: "DEV_DEBUG", enabled: false },
+        { type: "app", trigger: "Ctrl+Shift+F5", action: "DEV_RELOAD", enabled: true },
+        { type: "shell", trigger: "Ctrl+Shift+Alt+Space", action: "neofetch", linebreak: true, enabled: false },
+        { type: "shell", trigger: "Ctrl+Shift+Alt+C", action: "codex", linebreak: true, enabled: isCommandAvailable("codex") },
+        { type: "shell", trigger: "Ctrl+Shift+Alt+L", action: "claude", linebreak: true, enabled: isCommandAvailable("claude") }
+    ];
+}
+
+function mergeDefaultShortcuts(shortcuts) {
+    const existing = new Set(shortcuts.map(cut => `${cut.type}:${cut.trigger}:${cut.action}`));
+    getDefaultShortcuts().forEach(cut => {
+        const key = `${cut.type}:${cut.trigger}:${cut.action}`;
+        if (!existing.has(key)) {
+            shortcuts.push(cut);
+        }
+    });
+    return shortcuts;
+}
+
+function isAllowedExternalUrl(rawUrl) {
+    try {
+        let parsedUrl = new URL(rawUrl);
+        return parsedUrl.protocol === "https:" || parsedUrl.protocol === "http:";
+    } catch(e) {
+        return false;
+    }
+}
+
+function openExternalUrl(rawUrl) {
+    if (isAllowedExternalUrl(rawUrl)) {
+        shell.openExternal(rawUrl);
+    } else {
+        signale.warn(`Blocked external navigation to ${rawUrl}`);
+    }
+}
+
+function isAllowedAppUrl(rawUrl) {
+    try {
+        let parsedUrl = new URL(rawUrl);
+        return parsedUrl.protocol === "file:" && path.normalize(url.fileURLToPath(rawUrl)) === path.join(__dirname, "ui.html");
+    } catch(e) {
+        return false;
+    }
+}
+
 // Unset proxy env variables to avoid connection problems on the internal websockets
 // See #222
 if (process.env.http_proxy) delete process.env.http_proxy;
@@ -97,25 +163,18 @@ if (!fs.existsSync(settingsFile)) {
     }, "", 4));
     signale.info(`Default settings written to ${settingsFile}`);
 }
-// Create default shortcuts file
+// Create or migrate default shortcuts file
 if (!fs.existsSync(shortcutsFile)) {
-    fs.writeFileSync(shortcutsFile, JSON.stringify([
-        { type: "app", trigger: "Ctrl+Shift+C", action: "COPY", enabled: true },
-        { type: "app", trigger: "Ctrl+Shift+V", action: "PASTE", enabled: true },
-        { type: "app", trigger: "Ctrl+Tab", action: "NEXT_TAB", enabled: true },
-        { type: "app", trigger: "Ctrl+Shift+Tab", action: "PREVIOUS_TAB", enabled: true },
-        { type: "app", trigger: "Ctrl+X", action: "TAB_X", enabled: true },
-        { type: "app", trigger: "Ctrl+Shift+S", action: "SETTINGS", enabled: true },
-        { type: "app", trigger: "Ctrl+Shift+K", action: "SHORTCUTS", enabled: true },
-        { type: "app", trigger: "Ctrl+Shift+F", action: "FUZZY_SEARCH", enabled: true },
-        { type: "app", trigger: "Ctrl+Shift+L", action: "FS_LIST_VIEW", enabled: true },
-        { type: "app", trigger: "Ctrl+Shift+H", action: "FS_DOTFILES", enabled: true },
-        { type: "app", trigger: "Ctrl+Shift+P", action: "KB_PASSMODE", enabled: true },
-        { type: "app", trigger: "Ctrl+Shift+I", action: "DEV_DEBUG", enabled: false },
-        { type: "app", trigger: "Ctrl+Shift+F5", action: "DEV_RELOAD", enabled: true },
-        { type: "shell", trigger: "Ctrl+Shift+Alt+Space", action: "neofetch", linebreak: true, enabled: false }
-    ], "", 4));
+    fs.writeFileSync(shortcutsFile, JSON.stringify(getDefaultShortcuts(), "", 4));
     signale.info(`Default keymap written to ${shortcutsFile}`);
+} else {
+    let shortcuts = require(shortcutsFile);
+    let shortcutsCount = shortcuts.length;
+    let mergedShortcuts = mergeDefaultShortcuts(shortcuts);
+    if (mergedShortcuts.length !== shortcutsCount) {
+        fs.writeFileSync(shortcutsFile, JSON.stringify(mergedShortcuts, "", 4));
+        signale.info(`Keymap migrated with new default shortcuts at ${shortcutsFile}`);
+    }
 }
 //Create default window state file
 if(!fs.existsSync(lastWindowStateFile)) {
@@ -192,22 +251,39 @@ function createWindow(settings) {
         backgroundColor: '#000000',
         webPreferences: {
             devTools: true,
-	    enableRemoteModule: true,
-            contextIsolation: false,
+            preload: path.join(__dirname, "preload/security-preload.js"),
+            enableRemoteModule: true,
+            contextIsolation: true,
+            worldSafeExecuteJavaScript: true,
             backgroundThrottling: false,
             webSecurity: true,
             nodeIntegration: true,
             nodeIntegrationInSubFrames: false,
+            webviewTag: false,
             allowRunningInsecureContent: false,
             experimentalFeatures: settings.experimentalFeatures || false
         }
     });
 
-    win.loadURL(url.format({
+    const appUrl = url.format({
         pathname: path.join(__dirname, 'ui.html'),
         protocol: 'file:',
         slashes: true
-    }));
+    });
+
+    win.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
+        signale.warn(`Blocked permission request for ${permission}`);
+        callback(false);
+    });
+
+    if (typeof win.webContents.setWindowOpenHandler === "function") {
+        win.webContents.setWindowOpenHandler(({url}) => {
+            openExternalUrl(url);
+            return {action: "deny"};
+        });
+    }
+
+    win.loadURL(appUrl);
 
     signale.complete("Frontend window created!");
     win.show();
@@ -347,15 +423,17 @@ app.on('ready', async () => {
 });
 
 app.on('web-contents-created', (e, contents) => {
-    // Prevent creating more than one window
+    // Prevent creating more than one window. Only http(s) links may leave the app.
     contents.on('new-window', (e, url) => {
         e.preventDefault();
-        shell.openExternal(url);
+        openExternalUrl(url);
     });
 
-    // Prevent loading something else than the UI
     contents.on('will-navigate', (e, url) => {
-        if (url !== contents.getURL()) e.preventDefault();
+        if (!isAllowedAppUrl(url)) {
+            e.preventDefault();
+            openExternalUrl(url);
+        }
     });
 });
 
