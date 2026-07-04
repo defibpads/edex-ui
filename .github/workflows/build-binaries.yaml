@@ -33,9 +33,11 @@ jobs:
       with:
         node-version: 22
     - name: Setup npm and node-gyp
-      run: sudo npm i -g npm@10 node-gyp@latest
+      run: sudo npm i -g npm@10 node-gyp@10.3.1
     - name: Use modern node-gyp for npm lifecycle scripts
-      run: echo "npm_config_node_gyp=$(npm root -g)/node-gyp/bin/node-gyp.js" >> "$GITHUB_ENV"
+      run: |
+        echo "npm_config_node_gyp=$(npm root -g)/node-gyp/bin/node-gyp.js" >> "$GITHUB_ENV"
+        echo "GYP_DEFINES=openssl_fips=" >> "$GITHUB_ENV"
     - name: Reset npm cache and workspace
       run: |
         sudo chown -R "$(id -u):$(id -g)" ~/.npm || true
@@ -44,7 +46,7 @@ jobs:
     - name: Install build deps
       run: npm install
     - name: Upgrade workspace node-gyp
-      run: npm install --no-save node-gyp@latest
+      run: npm install --no-save node-gyp@10.3.1
     - name: Run prebuild script
       run: npm run prebuild-linux
     - name: Build for x64 / ia32
@@ -88,7 +90,7 @@ jobs:
         npm cache clean --force
         sudo rm -rf node_modules src/node_modules prebuild-src
     - name: Run prebuild outside of QEMU emulator
-      run: sudo npm i -g npm@10 node-gyp@latest && export npm_config_node_gyp="$(npm root -g)/node-gyp/bin/node-gyp.js" && npm install && npm install --no-save node-gyp@latest && rsync -a --info=progress2 src/ prebuild-src --exclude node_modules && node prebuild-minify.js && rm -rf node_modules
+      run: sudo npm i -g npm@10 node-gyp@10.3.1 && export npm_config_node_gyp="$(npm root -g)/node-gyp/bin/node-gyp.js" && export GYP_DEFINES="openssl_fips=" && npm install && npm install --no-save node-gyp@10.3.1 && rsync -a --info=progress2 src/ prebuild-src --exclude node_modules && node prebuild-minify.js && rm -rf node_modules
     - name: Build for arm32v7 (aka armv7l)
       run: |
         docker run --rm \
@@ -99,7 +101,7 @@ jobs:
           -w /workspace \
           -e GH_TOKEN \
           node:22-bookworm \
-          bash -c 'npm i -g npm@10 node-gyp@latest && export npm_config_node_gyp="$(npm root -g)/node-gyp/bin/node-gyp.js" && npm install && npm install --no-save node-gyp@latest && ./node_modules/.bin/electron-builder build -l --armv7l' 
+          bash -c 'npm i -g npm@10 node-gyp@10.3.1 && export npm_config_node_gyp="$(npm root -g)/node-gyp/bin/node-gyp.js" && export GYP_DEFINES="openssl_fips=" && npm install && npm install --no-save node-gyp@10.3.1 && ./node_modules/.bin/electron-builder build -l --armv7l' 
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - uses: actions/upload-artifact@v4
@@ -139,7 +141,7 @@ jobs:
         npm cache clean --force
         sudo rm -rf node_modules src/node_modules prebuild-src
     - name: Run prebuild outside of QEMU emulator
-      run: sudo npm i -g npm@10 node-gyp@latest && export npm_config_node_gyp="$(npm root -g)/node-gyp/bin/node-gyp.js" && npm install && npm install --no-save node-gyp@latest && rsync -a --info=progress2 src/ prebuild-src --exclude node_modules && node prebuild-minify.js && rm -rf node_modules
+      run: sudo npm i -g npm@10 node-gyp@10.3.1 && export npm_config_node_gyp="$(npm root -g)/node-gyp/bin/node-gyp.js" && export GYP_DEFINES="openssl_fips=" && npm install && npm install --no-save node-gyp@10.3.1 && rsync -a --info=progress2 src/ prebuild-src --exclude node_modules && node prebuild-minify.js && rm -rf node_modules
     - name: Build for arm64 (aka arm64v8)
       run: |
         docker run --rm \
@@ -150,7 +152,7 @@ jobs:
           -w /workspace \
           -e GH_TOKEN \
           node:22-bookworm \
-          bash -c 'npm i -g npm@10 node-gyp@latest && export npm_config_node_gyp="$(npm root -g)/node-gyp/bin/node-gyp.js" && npm install && npm install --no-save node-gyp@latest && ./node_modules/.bin/electron-builder build -l --arm64' 
+          bash -c 'npm i -g npm@10 node-gyp@10.3.1 && export npm_config_node_gyp="$(npm root -g)/node-gyp/bin/node-gyp.js" && export GYP_DEFINES="openssl_fips=" && npm install && npm install --no-save node-gyp@10.3.1 && ./node_modules/.bin/electron-builder build -l --arm64' 
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - uses: actions/upload-artifact@v4
@@ -190,12 +192,13 @@ jobs:
       with:
         node-version: 22
     - name: Setup npm and node-gyp
-      run: npm i -g npm@10 node-gyp@latest
+      run: npm i -g npm@10 node-gyp@10.3.1
     - name: Use modern node-gyp for npm lifecycle scripts
       shell: pwsh
       run: |
         $nodeGyp = Join-Path (npm root -g) 'node-gyp/bin/node-gyp.js'
         "npm_config_node_gyp=$nodeGyp" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        "GYP_DEFINES=openssl_fips=" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
     - name: Reset npm cache and workspace
       shell: pwsh
       run: |
@@ -208,7 +211,7 @@ jobs:
         npm_config_msvs_version: '2022'
         GYP_MSVS_VERSION: '2022'
     - name: Upgrade workspace node-gyp
-      run: npm install --no-save node-gyp@latest
+      run: npm install --no-save node-gyp@10.3.1
     - name: npm build
       run: npm run build-windows
       env:
@@ -248,9 +251,11 @@ jobs:
       with:
         node-version: 22
     - name: Setup npm and node-gyp
-      run: sudo npm i -g npm@10 node-gyp@latest
+      run: sudo npm i -g npm@10 node-gyp@10.3.1
     - name: Use modern node-gyp for npm lifecycle scripts
-      run: echo "npm_config_node_gyp=$(npm root -g)/node-gyp/bin/node-gyp.js" >> "$GITHUB_ENV"
+      run: |
+        echo "npm_config_node_gyp=$(npm root -g)/node-gyp/bin/node-gyp.js" >> "$GITHUB_ENV"
+        echo "GYP_DEFINES=openssl_fips=" >> "$GITHUB_ENV"
     - name: Reset npm cache and workspace
       run: |
         sudo chown -R "$(id -u):$(id -g)" ~/.npm || true
@@ -259,7 +264,7 @@ jobs:
     - name: npm install
       run: npm install
     - name: Upgrade workspace node-gyp
-      run: npm install --no-save node-gyp@latest
+      run: npm install --no-save node-gyp@10.3.1
     - name: npm build
       run: npm run build-darwin
       env:

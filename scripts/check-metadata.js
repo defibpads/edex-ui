@@ -50,6 +50,18 @@ for (const scriptName of ['prebuild-linux', 'prebuild-darwin', 'prebuild-windows
     }
 }
 
+
+const buildWorkflow = fs.readFileSync(path.join(root, '.github', 'workflows', 'build-binaries.yaml'), 'utf8');
+if (!buildWorkflow.includes('node-gyp@10.3.1')) {
+    throw new Error('build workflow must pin node-gyp@10.3.1 instead of using node-gyp@latest');
+}
+if (buildWorkflow.includes('node-gyp@latest')) {
+    throw new Error('build workflow must not install node-gyp@latest because Electron 12 native rebuilds are sensitive to node-gyp major changes');
+}
+if (!buildWorkflow.includes('GYP_DEFINES=openssl_fips=')) {
+    throw new Error('build workflow must define GYP_DEFINES=openssl_fips= for Electron 12 header gyp conditions');
+}
+
 const appNpmrc = fs.readFileSync(path.join(root, 'src', '.npmrc'), 'utf8');
 if (!appNpmrc.includes('node_gyp=../node_modules/node-gyp/bin/node-gyp.js')) {
     throw new Error('src/.npmrc must point nested installs at the root workspace node-gyp');
