@@ -70,6 +70,9 @@ if (appNpmrc.includes('node_gyp=')) {
 if (!buildWorkflow.includes('node-gyp.cmd')) {
     throw new Error('Windows build workflow must point npm_config_node_gyp at node-gyp.cmd, not a JavaScript file');
 }
+if (!buildWorkflow.includes('--security-revert=CVE-2024-27980')) {
+    throw new Error('Windows build workflow must scope NODE_OPTIONS=--security-revert=CVE-2024-27980 to the node-pty packaging rebuild');
+}
 if (!buildWorkflow.includes('npm run patch:electron-builder-python')) {
     throw new Error('macOS build workflow must patch electron-builder /usr/bin/python references before creating DMGs');
 }
