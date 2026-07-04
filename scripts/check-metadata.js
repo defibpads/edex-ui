@@ -42,4 +42,10 @@ if (rootPackage.version !== appPackage.version) {
     throw new Error(`Version mismatch: root=${rootPackage.version}, src=${appPackage.version}`);
 }
 
+
+const appNpmrc = fs.readFileSync(path.join(root, 'src', '.npmrc'), 'utf8');
+if (!appNpmrc.includes('node_gyp=../node_modules/node-gyp/bin/node-gyp.js')) {
+    throw new Error('src/.npmrc must point nested installs at the root workspace node-gyp');
+}
+
 console.log('package metadata ok');
