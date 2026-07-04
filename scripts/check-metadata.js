@@ -43,6 +43,13 @@ if (rootPackage.version !== appPackage.version) {
 }
 
 
+
+for (const scriptName of ['prebuild-linux', 'prebuild-darwin', 'prebuild-windows']) {
+    if (!rootPackage.scripts[scriptName].includes('npm install --ignore-scripts')) {
+        throw new Error(`${scriptName} must install with --ignore-scripts so native modules are rebuilt by electron-builder for Electron`);
+    }
+}
+
 const appNpmrc = fs.readFileSync(path.join(root, 'src', '.npmrc'), 'utf8');
 if (!appNpmrc.includes('node_gyp=../node_modules/node-gyp/bin/node-gyp.js')) {
     throw new Error('src/.npmrc must point nested installs at the root workspace node-gyp');
