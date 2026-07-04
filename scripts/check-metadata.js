@@ -76,5 +76,8 @@ if (!buildWorkflow.includes('--security-revert=CVE-2024-27980')) {
 if (!buildWorkflow.includes('npm run patch:electron-builder-python')) {
     throw new Error('macOS build workflow must patch electron-builder /usr/bin/python references before creating DMGs');
 }
+if (!fs.readFileSync(path.join(root, 'scripts', 'patch-electron-builder-python.js'), 'utf8').includes('sys.setdefaultencoding')) {
+    throw new Error('macOS electron-builder patch must handle Python 2 sys.setdefaultencoding calls under Python 3');
+}
 
 console.log('package metadata ok');
