@@ -196,7 +196,7 @@ jobs:
     - name: Use modern node-gyp for npm lifecycle scripts
       shell: pwsh
       run: |
-        $nodeGyp = Join-Path (npm root -g) 'node-gyp/bin/node-gyp.js'
+        $nodeGyp = Join-Path (npm prefix -g) 'node-gyp.cmd'
         "npm_config_node_gyp=$nodeGyp" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         "GYP_DEFINES=openssl_fips=" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
     - name: Reset npm cache and workspace
@@ -265,6 +265,8 @@ jobs:
       run: npm install
     - name: Upgrade workspace node-gyp
       run: npm install --no-save node-gyp@10.3.1
+    - name: Patch electron-builder python path
+      run: npm run patch:electron-builder-python
     - name: npm build
       run: npm run build-darwin
       env:

@@ -34,7 +34,8 @@
     "doctor:native": "node scripts/doctor-native.js",
     "install-darwin": "npm install && cd src && npm install && ./../node_modules/.bin/electron-rebuild -f -w node-pty && cd ..",
     "build-darwin-x64": "./node_modules/.bin/electron-builder build -m --x64",
-    "build-darwin-arm64": "./node_modules/.bin/electron-builder build -m --arm64"
+    "build-darwin-arm64": "./node_modules/.bin/electron-builder build -m --arm64",
+    "patch:electron-builder-python": "node scripts/patch-electron-builder-python.js"
   },
   "repository": {
     "type": "git",

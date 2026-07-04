@@ -21,7 +21,8 @@ const requiredScripts = [
     'build-darwin-x64',
     'build-darwin-arm64',
     'build-windows',
-    'doctor:native'
+    'doctor:native',
+    'patch:electron-builder-python'
 ];
 
 const missingScripts = requiredScripts.filter(script => !rootPackage.scripts || !rootPackage.scripts[script]);
@@ -63,8 +64,14 @@ if (!buildWorkflow.includes('GYP_DEFINES=openssl_fips=')) {
 }
 
 const appNpmrc = fs.readFileSync(path.join(root, 'src', '.npmrc'), 'utf8');
-if (!appNpmrc.includes('node_gyp=../node_modules/node-gyp/bin/node-gyp.js')) {
-    throw new Error('src/.npmrc must point nested installs at the root workspace node-gyp');
+if (appNpmrc.includes('node_gyp=')) {
+    throw new Error('src/.npmrc must not set node_gyp because the copied prebuild .npmrc breaks node-pty rebuilds on Windows');
+}
+if (!buildWorkflow.includes('node-gyp.cmd')) {
+    throw new Error('Windows build workflow must point npm_config_node_gyp at node-gyp.cmd, not a JavaScript file');
+}
+if (!buildWorkflow.includes('npm run patch:electron-builder-python')) {
+    throw new Error('macOS build workflow must patch electron-builder /usr/bin/python references before creating DMGs');
 }
 
 console.log('package metadata ok');
