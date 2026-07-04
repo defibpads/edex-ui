@@ -219,9 +219,6 @@ jobs:
         npm_config_build_from_source: 'true'
         npm_config_msvs_version: '2022'
         GYP_MSVS_VERSION: '2022'
-        # node-pty 0.10.1 still spawns Windows command shims directly during rebuild.
-        # Keep this scoped to packaging until node-pty/Electron can be upgraded together.
-        NODE_OPTIONS: '--security-revert=CVE-2024-27980'
     - uses: actions/upload-artifact@v4
       with:
         name: Windows-Installer
