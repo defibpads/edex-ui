@@ -34,6 +34,11 @@ jobs:
         node-version: 22
     - name: Setup npm
       run: sudo npm i -g npm@10
+    - name: Reset npm cache and workspace
+      run: |
+        sudo chown -R "$(id -u):$(id -g)" ~/.npm || true
+        npm cache clean --force
+        sudo rm -rf node_modules src/node_modules prebuild-src
     - name: Install build deps
       run: npm install
     - name: Run prebuild script
@@ -73,6 +78,11 @@ jobs:
         # https://github.com/electron/get#how-it-works
         path: ~/.cache/electron
         key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+    - name: Reset npm cache and workspace
+      run: |
+        sudo chown -R "$(id -u):$(id -g)" ~/.npm || true
+        npm cache clean --force
+        sudo rm -rf node_modules src/node_modules prebuild-src
     - name: Run prebuild outside of QEMU emulator
       run: sudo npm i -g npm@10 && npm install && rsync -a --info=progress2 src/ prebuild-src --exclude node_modules && node prebuild-minify.js && rm -rf node_modules
     - name: Build for arm32v7 (aka armv7l)
@@ -119,6 +129,11 @@ jobs:
         # https://github.com/electron/get#how-it-works
         path: ~/.cache/electron
         key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+    - name: Reset npm cache and workspace
+      run: |
+        sudo chown -R "$(id -u):$(id -g)" ~/.npm || true
+        npm cache clean --force
+        sudo rm -rf node_modules src/node_modules prebuild-src
     - name: Run prebuild outside of QEMU emulator
       run: sudo npm i -g npm@10 && npm install && rsync -a --info=progress2 src/ prebuild-src --exclude node_modules && node prebuild-minify.js && rm -rf node_modules
     - name: Build for arm64 (aka arm64v8)
@@ -168,6 +183,11 @@ jobs:
         node-version: 22
     - name: Setup npm
       run: npm i -g npm@10
+    - name: Reset npm cache and workspace
+      shell: pwsh
+      run: |
+        npm cache clean --force
+        Remove-Item -Recurse -Force node_modules, src/node_modules, prebuild-src -ErrorAction SilentlyContinue
     - name: npm install
       run: npm install
     - name: npm build
@@ -207,6 +227,11 @@ jobs:
         node-version: 22
     - name: Setup npm
       run: sudo npm i -g npm@10
+    - name: Reset npm cache and workspace
+      run: |
+        sudo chown -R "$(id -u):$(id -g)" ~/.npm || true
+        npm cache clean --force
+        sudo rm -rf node_modules src/node_modules prebuild-src
     - name: npm install
       run: npm install
     - name: npm build

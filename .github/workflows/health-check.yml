@@ -21,6 +21,12 @@ jobs:
           node-version: '22'
           cache: npm
 
+      - name: Reset npm cache and workspace
+        run: |
+          sudo chown -R "$(id -u):$(id -g)" ~/.npm || true
+          npm cache clean --force
+          sudo rm -rf node_modules src/node_modules prebuild-src
+
       - name: Install root dependencies without native rebuilds
         run: npm ci --ignore-scripts
 
