@@ -32,8 +32,8 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: 22
-    - name: Setup npm
-      run: sudo npm i -g npm@10
+    - name: Setup npm and node-gyp
+      run: sudo npm i -g npm@10 node-gyp@latest
     - name: Reset npm cache and workspace
       run: |
         sudo chown -R "$(id -u):$(id -g)" ~/.npm || true
@@ -84,7 +84,7 @@ jobs:
         npm cache clean --force
         sudo rm -rf node_modules src/node_modules prebuild-src
     - name: Run prebuild outside of QEMU emulator
-      run: sudo npm i -g npm@10 && npm install && rsync -a --info=progress2 src/ prebuild-src --exclude node_modules && node prebuild-minify.js && rm -rf node_modules
+      run: sudo npm i -g npm@10 node-gyp@latest && npm install && rsync -a --info=progress2 src/ prebuild-src --exclude node_modules && node prebuild-minify.js && rm -rf node_modules
     - name: Build for arm32v7 (aka armv7l)
       run: |
         docker run --rm \
@@ -95,7 +95,7 @@ jobs:
           -w /workspace \
           -e GH_TOKEN \
           node:22-bookworm \
-          bash -c "npm i -g npm@10 && npm install && ./node_modules/.bin/electron-builder build -l --armv7l"
+          bash -c "npm i -g npm@10 node-gyp@latest && npm install && ./node_modules/.bin/electron-builder build -l --armv7l"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - uses: actions/upload-artifact@v4
@@ -135,7 +135,7 @@ jobs:
         npm cache clean --force
         sudo rm -rf node_modules src/node_modules prebuild-src
     - name: Run prebuild outside of QEMU emulator
-      run: sudo npm i -g npm@10 && npm install && rsync -a --info=progress2 src/ prebuild-src --exclude node_modules && node prebuild-minify.js && rm -rf node_modules
+      run: sudo npm i -g npm@10 node-gyp@latest && npm install && rsync -a --info=progress2 src/ prebuild-src --exclude node_modules && node prebuild-minify.js && rm -rf node_modules
     - name: Build for arm64 (aka arm64v8)
       run: |
         docker run --rm \
@@ -146,7 +146,7 @@ jobs:
           -w /workspace \
           -e GH_TOKEN \
           node:22-bookworm \
-          bash -c "npm i -g npm@10 && npm install && ./node_modules/.bin/electron-builder build -l --arm64"
+          bash -c "npm i -g npm@10 node-gyp@latest && npm install && ./node_modules/.bin/electron-builder build -l --arm64"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - uses: actions/upload-artifact@v4
@@ -177,12 +177,16 @@ jobs:
         # https://github.com/electron/get#how-it-works
         path: ~/AppData/Local/electron/Cache
         key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+    - name: Setup Python for native modules
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: 22
-    - name: Setup npm
-      run: npm i -g npm@10
+    - name: Setup npm and node-gyp
+      run: npm i -g npm@10 node-gyp@latest
     - name: Reset npm cache and workspace
       shell: pwsh
       run: |
@@ -190,10 +194,13 @@ jobs:
         Remove-Item -Recurse -Force node_modules, src/node_modules, prebuild-src -ErrorAction SilentlyContinue
     - name: npm install
       run: npm install
+      env:
+        npm_config_build_from_source: 'true'
     - name: npm build
       run: npm run build-windows
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        npm_config_build_from_source: 'true'
     - uses: actions/upload-artifact@v4
       with:
         name: Windows-Installer
@@ -225,8 +232,8 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: 22
-    - name: Setup npm
-      run: sudo npm i -g npm@10
+    - name: Setup npm and node-gyp
+      run: sudo npm i -g npm@10 node-gyp@latest
     - name: Reset npm cache and workspace
       run: |
         sudo chown -R "$(id -u):$(id -g)" ~/.npm || true
