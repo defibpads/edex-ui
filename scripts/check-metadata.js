@@ -43,6 +43,10 @@ if (rootPackage.version !== appPackage.version) {
     throw new Error(`Version mismatch: root=${rootPackage.version}, src=${appPackage.version}`);
 }
 
+if (appPackage.dependencies['node-pty'] !== '1.1.0') {
+    throw new Error('src/package.json must use node-pty 1.1.0 for modern Windows/Node packaging compatibility');
+}
+
 
 
 for (const scriptName of ['prebuild-linux', 'prebuild-darwin', 'prebuild-windows']) {
