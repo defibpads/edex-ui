@@ -73,6 +73,9 @@ if (!buildWorkflow.includes('node-gyp.cmd')) {
 if (buildWorkflow.includes('--security-revert=CVE-2024-27980')) {
     throw new Error('Windows build workflow must not use NODE_OPTIONS=--security-revert because Node 22+ rejects that flag in NODE_OPTIONS');
 }
+if (buildWorkflow.includes('npm_config_build_from_source')) {
+    throw new Error('Windows build workflow must not force npm_config_build_from_source because node-pty should use available prebuilds on Windows');
+}
 if (!buildWorkflow.includes('npm run patch:electron-builder-python')) {
     throw new Error('macOS build workflow must patch electron-builder /usr/bin/python references before creating DMGs');
 }
