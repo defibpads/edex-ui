@@ -56,6 +56,7 @@ Click the banner below and sign up to **Bytes**, the only newsletter cool enough
 - Directory viewer that follows the CWD (current working directory) of the terminal.
 - Advanced customization using themes, on-screen keyboard layouts, CSS injections. See the [wiki](https://github.com/GitSquared/edex-ui/wiki) for more info.
 - Optional sound effects made by a talented sound designer for maximum hollywood hacking vibe.
+- Optional terminal shortcuts for launching local Codex and Claude Code CLIs when installed.
 
 ## Screenshots
 ![Default screenshot](media/screenshot_default.png)

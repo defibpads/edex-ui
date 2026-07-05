@@ -6,9 +6,9 @@ jobs:
   build-linux:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Cache node modules
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       env:
         cache-name: cache-node-modules
       with:
@@ -16,7 +16,7 @@ jobs:
         path: ~/.npm
         key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
     - name: Cache Electron binaries
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       env:
         cache-name: cache-electron-bins
       with:
@@ -29,20 +29,31 @@ jobs:
         sudo apt update
         sudo apt install libc6-dev-i386 gcc-multilib g++-multilib
     - name: Setup Node.js
-      uses: actions/setup-node@v1
+      uses: actions/setup-node@v4
       with:
-        node-version: 14
-    - name: Setup npm
-      run: sudo npm i -g npm@7
+        node-version: 22
+    - name: Setup npm and node-gyp
+      run: sudo npm i -g npm@10 node-gyp@10.3.1
+    - name: Use modern node-gyp for npm lifecycle scripts
+      run: |
+        echo "npm_config_node_gyp=$(npm root -g)/node-gyp/bin/node-gyp.js" >> "$GITHUB_ENV"
+        echo "GYP_DEFINES=openssl_fips=" >> "$GITHUB_ENV"
+    - name: Reset npm cache and workspace
+      run: |
+        sudo chown -R "$(id -u):$(id -g)" ~/.npm || true
+        npm cache clean --force
+        sudo rm -rf node_modules src/node_modules prebuild-src
     - name: Install build deps
       run: npm install
+    - name: Upgrade workspace node-gyp
+      run: npm install --no-save node-gyp@10.3.1
     - name: Run prebuild script
       run: npm run prebuild-linux
     - name: Build for x64 / ia32
       run: ./node_modules/.bin/electron-builder build -l --x64 --ia32
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v4
       with:
         name: Linux-AppImages
         path: dist/*.AppImage
@@ -51,13 +62,13 @@ jobs:
   build-linux-arm32:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Setup QEMU
-      uses: docker/setup-qemu-action@v1
+      uses: docker/setup-qemu-action@v3
       with:
         platforms: arm
     - name: Cache node modules
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       env:
         cache-name: cache-node-modules
       with:
@@ -65,7 +76,7 @@ jobs:
         path: ~/.npm
         key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
     - name: Cache Electron binaries
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       env:
         cache-name: cache-electron-bins
       with:
@@ -73,15 +84,27 @@ jobs:
         # https://github.com/electron/get#how-it-works
         path: ~/.cache/electron
         key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+    - name: Reset npm cache and workspace
+      run: |
+        sudo chown -R "$(id -u):$(id -g)" ~/.npm || true
+        npm cache clean --force
+        sudo rm -rf node_modules src/node_modules prebuild-src
     - name: Run prebuild outside of QEMU emulator
-      run: sudo npm i -g npm@7 && npm install && rsync -a --info=progress2 src/ prebuild-src --exclude node_modules && node prebuild-minify.js && rm -rf node_modules
+      run: sudo npm i -g npm@10 node-gyp@10.3.1 && export npm_config_node_gyp="$(npm root -g)/node-gyp/bin/node-gyp.js" && export GYP_DEFINES="openssl_fips=" && npm install && npm install --no-save node-gyp@10.3.1 && rsync -a --info=progress2 src/ prebuild-src --exclude node_modules && node prebuild-minify.js && rm -rf node_modules
     - name: Build for arm32v7 (aka armv7l)
-      uses: docker://arm32v7/node:14-buster
-      with:
-        args: bash -c "npm i -g npm@7 && npm install && ./node_modules/.bin/electron-builder build -l --armv7l"
+      run: |
+        docker run --rm \
+          --platform linux/arm/v7 \
+          -v "$PWD:/workspace" \
+          -v "$HOME/.npm:/root/.npm" \
+          -v "$HOME/.cache/electron:/root/.cache/electron" \
+          -w /workspace \
+          -e GH_TOKEN \
+          node:22-bookworm \
+          bash -c 'npm i -g npm@10 node-gyp@10.3.1 && export npm_config_node_gyp="$(npm root -g)/node-gyp/bin/node-gyp.js" && export GYP_DEFINES="openssl_fips=" && npm install && npm install --no-save node-gyp@10.3.1 && ./node_modules/.bin/electron-builder build -l --armv7l' 
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v4
       with:
         name: Linux-arm32-AppImage
         path: dist/*.AppImage
@@ -90,13 +113,13 @@ jobs:
   build-linux-arm64:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Setup QEMU
-      uses: docker/setup-qemu-action@v1
+      uses: docker/setup-qemu-action@v3
       with:
         platforms: arm64
     - name: Cache node modules
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       env:
         cache-name: cache-node-modules
       with:
@@ -104,7 +127,7 @@ jobs:
         path: ~/.npm
         key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
     - name: Cache Electron binaries
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       env:
         cache-name: cache-electron-bins
       with:
@@ -112,34 +135,47 @@ jobs:
         # https://github.com/electron/get#how-it-works
         path: ~/.cache/electron
         key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+    - name: Reset npm cache and workspace
+      run: |
+        sudo chown -R "$(id -u):$(id -g)" ~/.npm || true
+        npm cache clean --force
+        sudo rm -rf node_modules src/node_modules prebuild-src
     - name: Run prebuild outside of QEMU emulator
-      run: sudo npm i -g npm@7 && npm install && rsync -a --info=progress2 src/ prebuild-src --exclude node_modules && node prebuild-minify.js && rm -rf node_modules
+      run: sudo npm i -g npm@10 node-gyp@10.3.1 && export npm_config_node_gyp="$(npm root -g)/node-gyp/bin/node-gyp.js" && export GYP_DEFINES="openssl_fips=" && npm install && npm install --no-save node-gyp@10.3.1 && rsync -a --info=progress2 src/ prebuild-src --exclude node_modules && node prebuild-minify.js && rm -rf node_modules
     - name: Build for arm64 (aka arm64v8)
-      uses: docker://arm64v8/node:14-buster
-      with:
-        args: bash -c "npm i -g npm@7 && npm install && ./node_modules/.bin/electron-builder build -l --arm64"
+      run: |
+        docker run --rm \
+          --platform linux/arm64 \
+          -v "$PWD:/workspace" \
+          -v "$HOME/.npm:/root/.npm" \
+          -v "$HOME/.cache/electron:/root/.cache/electron" \
+          -w /workspace \
+          -e GH_TOKEN \
+          node:22-bookworm \
+          bash -c 'npm i -g npm@10 node-gyp@10.3.1 && export npm_config_node_gyp="$(npm root -g)/node-gyp/bin/node-gyp.js" && export GYP_DEFINES="openssl_fips=" && npm install && npm install --no-save node-gyp@10.3.1 && ./node_modules/.bin/electron-builder build -l --arm64' 
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v4
       with:
         name: Linux-arm64-AppImage
         path: dist/*.AppImage
         if-no-files-found: error
 
   build-windows:
-    runs-on: windows-latest
+    runs-on: windows-2022
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v4
     - name: Get npm cache directory
       id: npm-cache
+      shell: pwsh
       run: |
-        echo "::set-output name=dir::$(npm config get cache)"
-    - uses: actions/cache@v2
+        "dir=$(npm config get cache)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+    - uses: actions/cache@v4
       with:
         path: ${{ steps.npm-cache.outputs.dir }}
         key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
     - name: Cache Electron binaries
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       env:
         cache-name: cache-electron-bins
       with:
@@ -147,19 +183,41 @@ jobs:
         # https://github.com/electron/get#how-it-works
         path: ~/AppData/Local/electron/Cache
         key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
-    - name: Setup Node.js
-      uses: actions/setup-node@v1
+    - name: Setup Python for native modules
+      uses: actions/setup-python@v4
       with:
-        node-version: 14
-    - name: Setup npm
-      run: npm i -g npm@7
+        python-version: '3.11'
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+    - name: Setup npm and node-gyp
+      run: npm i -g npm@10 node-gyp@10.3.1
+    - name: Use modern node-gyp for npm lifecycle scripts
+      shell: pwsh
+      run: |
+        $nodeGyp = Join-Path (npm prefix -g) 'node-gyp.cmd'
+        "npm_config_node_gyp=$nodeGyp" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        "GYP_DEFINES=openssl_fips=" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+    - name: Reset npm cache and workspace
+      shell: pwsh
+      run: |
+        npm cache clean --force
+        Remove-Item -Recurse -Force node_modules, src/node_modules, prebuild-src -ErrorAction SilentlyContinue
     - name: npm install
       run: npm install
+      env:
+        npm_config_msvs_version: '2022'
+        GYP_MSVS_VERSION: '2022'
+    - name: Upgrade workspace node-gyp
+      run: npm install --no-save node-gyp@10.3.1
     - name: npm build
       run: npm run build-windows
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    - uses: actions/upload-artifact@v2
+        npm_config_msvs_version: '2022'
+        GYP_MSVS_VERSION: '2022'
+    - uses: actions/upload-artifact@v4
       with:
         name: Windows-Installer
         path: dist/*.exe
@@ -168,9 +226,9 @@ jobs:
   build-darwin:
     runs-on: macos-latest
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v4
     - name: Cache node modules
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       env:
         cache-name: cache-node-modules
       with:
@@ -178,7 +236,7 @@ jobs:
         path: ~/.npm
         key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
     - name: Cache Electron binaries
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       env:
         cache-name: cache-electron-bins
       with:
@@ -187,18 +245,31 @@ jobs:
         path: ~/Library/Caches/electron
         key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
     - name: Setup Node.js
-      uses: actions/setup-node@v1
+      uses: actions/setup-node@v4
       with:
-        node-version: 14
-    - name: Setup npm
-      run: sudo npm i -g npm@7
+        node-version: 22
+    - name: Setup npm and node-gyp
+      run: sudo npm i -g npm@10 node-gyp@10.3.1
+    - name: Use modern node-gyp for npm lifecycle scripts
+      run: |
+        echo "npm_config_node_gyp=$(npm root -g)/node-gyp/bin/node-gyp.js" >> "$GITHUB_ENV"
+        echo "GYP_DEFINES=openssl_fips=" >> "$GITHUB_ENV"
+    - name: Reset npm cache and workspace
+      run: |
+        sudo chown -R "$(id -u):$(id -g)" ~/.npm || true
+        npm cache clean --force
+        sudo rm -rf node_modules src/node_modules prebuild-src
     - name: npm install
       run: npm install
+    - name: Upgrade workspace node-gyp
+      run: npm install --no-save node-gyp@10.3.1
+    - name: Patch electron-builder python path
+      run: npm run patch:electron-builder-python
     - name: npm build
       run: npm run build-darwin
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v4
       with:
         name: MacOS-Image
         path: dist/*.dmg
